@@ -1,18 +1,68 @@
 import Head from "next/head";
 import styles from "/styles/index.module.css";
-import Link from "next/link";
 import { useState } from "react";
 
 export default function Home() {
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-
     if (!query.trim()) return;
 
-    const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    setLoading(true);
+    setResults([]);
+
+    try {
+      // DuckDuckGo Instant Answer API
+      const res = await fetch(
+        `https://api.duckduckgo.com/?q=${encodeURIComponent(
+          query
+        )}&format=json&no_redirect=1&skip_disambig=1`
+      );
+      const data = await res.json();
+
+      // Parse results
+      const parsedResults = [];
+
+      // Main Abstract (summary)
+      if (data.AbstractText) {
+        parsedResults.push({
+          title: data.Heading || "Summary",
+          snippet: data.AbstractText,
+          url: data.AbstractURL || "#",
+        });
+      }
+
+      // Related Topics
+      if (data.RelatedTopics && data.RelatedTopics.length) {
+        data.RelatedTopics.forEach((topic) => {
+          if (topic.Text && topic.FirstURL) {
+            parsedResults.push({
+              title: topic.Text.split(" - ")[0],
+              snippet: topic.Text,
+              url: topic.FirstURL,
+            });
+          } else if (topic.Topics) {
+            topic.Topics.forEach((sub) => {
+              parsedResults.push({
+                title: sub.Text.split(" - ")[0],
+                snippet: sub.Text,
+                url: sub.FirstURL,
+              });
+            });
+          }
+        });
+      }
+
+      setResults(parsedResults);
+    } catch (err) {
+      console.error(err);
+      setResults([{ title: "Error", snippet: "Failed to fetch results", url: "#" }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -24,66 +74,49 @@ export default function Home() {
       </Head>
 
       <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <Link href="/">Colango!</Link>
-        </h1>
+        <h1 className={styles.title}>Welcome to Colango!</h1>
+        <p className={styles.description}>Let's search the web right here:</p>
 
-        <p className={styles.description}>
-          <code className={styles.code}>Let&apos;s go right now</code>
-        </p>
-
-        {/* 🔍 SEARCH BOX (DuckDuckGo, iframe-safe) */}
         <form onSubmit={onSubmit} style={{ marginBottom: "2rem" }}>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search the web…"
-            style={{
-              padding: "12px",
-              width: "300px",
-              fontSize: "16px",
-            }}
+            style={{ padding: "12px", width: "300px", fontSize: "16px" }}
           />
+          <button type="submit" style={{ marginLeft: "8px", padding: "12px" }}>
+            Search
+          </button>
         </form>
 
-        <div className={styles.grid}>
-          <Link href="/" className={styles.card}>
-            <h2>个人信息 &rarr;</h2>
-            <p>配置您的个人相关信息</p>
-          </Link>
+        {loading && <p>Loading results...</p>}
 
-          <Link href="/" className={styles.card}>
-            <h2>我的发布 &rarr;</h2>
-            <p>查看您以往发布的内容</p>
-          </Link>
-
-          <Link href="/" className={styles.card}>
-            <h2>探索发现 &rarr;</h2>
-            <p>探索和你一样有趣的人</p>
-          </Link>
-
-          <Link
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.card}
-          >
-            <h2>关于我们 &rarr;</h2>
-            <p>欢迎加入我们</p>
-          </Link>
-        </div>
+        {results.length > 0 && (
+          <div style={{ width: "100%", maxWidth: "600px" }}>
+            {results.map((r, idx) => (
+              <a
+                key={idx}
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "block",
+                  marginBottom: "1rem",
+                  padding: "1rem",
+                  border: "1px solid #ccc",
+                  borderRadius: "8px",
+                  textDecoration: "none",
+                  color: "#000",
+                }}
+              >
+                <h3>{r.title}</h3>
+                <p>{r.snippet}</p>
+              </a>
+            ))}
+          </div>
+        )}
       </main>
-
-      <footer className={styles.footer}>
-        <a href="/" target="_blank" rel="noopener noreferrer">
-          Powered by @crust-hub
-        </a>
-      </footer>
-    </div>
-  );
-}
-
     </div>
   );
 }
