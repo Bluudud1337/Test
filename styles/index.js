@@ -1,8 +1,20 @@
 import Head from "next/head";
 import styles from "/styles/index.module.css";
 import Link from "next/link";
+import { useState } from "react";
 
 export default function Home() {
+  const [query, setQuery] = useState("");
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+
+    if (!query.trim()) return;
+
+    const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -19,6 +31,21 @@ export default function Home() {
         <p className={styles.description}>
           <code className={styles.code}>Let&apos;s go right now</code>
         </p>
+
+        {/* 🔍 SEARCH BOX (DuckDuckGo, iframe-safe) */}
+        <form onSubmit={onSubmit} style={{ marginBottom: "2rem" }}>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search the web…"
+            style={{
+              padding: "12px",
+              width: "300px",
+              fontSize: "16px",
+            }}
+          />
+        </form>
 
         <div className={styles.grid}>
           <Link href="/" className={styles.card}>
@@ -51,11 +78,12 @@ export default function Home() {
       <footer className={styles.footer}>
         <a href="/" target="_blank" rel="noopener noreferrer">
           Powered by @crust-hub
-          {/* <span className={styles.logo}>
-            <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-          </span> */}
         </a>
       </footer>
+    </div>
+  );
+}
+
     </div>
   );
 }
